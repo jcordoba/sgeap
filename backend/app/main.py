@@ -10,6 +10,7 @@ from app.routers import (
     observaciones_router,
     auth_router,
     audit_router,
+    documento_router,
 )
 
 settings = get_settings()
@@ -36,6 +37,7 @@ app.include_router(fases_router)
 app.include_router(evidencias_router)
 app.include_router(observaciones_router)
 app.include_router(audit_router)
+app.include_router(documento_router)
 
 
 @app.get("/api/health")
