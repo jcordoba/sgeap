@@ -48,7 +48,9 @@
       "Bash(grep -v \"^$\")",
       "Bash(taskkill /PID 149840 /F)",
       "Bash(npx skills *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(../venv/Scripts/python *)"
     ]
   }
 }
