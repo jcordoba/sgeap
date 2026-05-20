@@ -14,6 +14,14 @@ class UserCreate(BaseModel):
     role_id: Optional[UUID] = None
 
 
+class UserUpdate(BaseModel):
+    """Schema for updating a user."""
+    email: Optional[EmailStr] = None
+    password: Optional[str] = None
+    nombre_completo: Optional[str] = None
+    activo: Optional[bool] = None
+
+
 class UserResponse(BaseModel):
     """Schema for user response."""
     id: UUID

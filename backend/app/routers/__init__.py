@@ -6,6 +6,7 @@ from app.routers.observaciones import router as observaciones_router
 from app.routers.auth import router as auth_router
 from app.routers.audit import router as audit_router
 from app.routers.documento import router as documento_router
+from app.routers.users import router as users_router
 
 __all__ = [
     "expedientes_router",
@@ -15,4 +16,5 @@ __all__ = [
     "auth_router",
     "audit_router",
     "documento_router",
+    "users_router",
 ]
