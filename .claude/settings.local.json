@@ -56,7 +56,8 @@
       "Bash(.venv/Scripts/python.exe -m pip install bcrypt==4.0.1 passlib==1.7.4 --quiet)",
       "Bash(.venv/Scripts/python.exe *)",
       "Bash(netstat -ano)",
-      "Bash(taskkill //F //PID 7892)"
+      "Bash(taskkill //F //PID 7892)",
+      "Bash(node -e \"console.log\\(Object.keys\\(require\\('@base-ui/react'\\)\\)\\)\")"
     ]
   }
 }
