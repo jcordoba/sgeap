@@ -50,7 +50,11 @@
       "Bash(npx skills *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(../venv/Scripts/python *)"
+      "Bash(../venv/Scripts/python *)",
+      "Bash(ls venv/Scripts/python*)",
+      "Bash(ls .venv/Scripts/python*)",
+      "Bash(.venv/Scripts/python.exe -m pip install bcrypt==4.0.1 passlib==1.7.4 --quiet)",
+      "Bash(.venv/Scripts/python.exe *)"
     ]
   }
 }
