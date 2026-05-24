@@ -9,6 +9,8 @@ from app.models import Fase, Expediente
 from app.models.enums import EstadoExpediente
 from app.schemas.fase import FaseUpdate, FaseResponse
 from app.services.audit import AuditService
+from app.services.ia_fase import auto_fill_fase_sync, auto_fill_expediente_fases_sync
+from app.services.ai_minimax import mejorar_contenido
 
 router = APIRouter(prefix="/api", tags=["fases"])
 
@@ -208,3 +210,119 @@ def list_campos(fase_id: UUID, db: Session = Depends(get_db)):
     """List all campos for a fase."""
     fase = get_fase_or_404(db, fase_id)
     return [{"id": str(c.id), "clave": c.clave, "valor": c.valor, "tipo": c.tipo} for c in fase.campos]
+
+
+@router.post("/fases/{fase_id}/auto-fill")
+def auto_fill_fase_endpoint(fase_id: UUID, db: Session = Depends(get_db)):
+    """Auto-fill fase fields using AI/RAG suggestions."""
+    result = auto_fill_fase_sync(str(fase_id), db)
+    if not result.get("success"):
+        raise HTTPException(status_code=404, detail=result.get("error", "Error"))
+    return result
+
+
+@router.post("/fases/{fase_id}/mejorar-contenido")
+async def mejorar_contenido_fase(
+    fase_id: UUID,
+    clave: str,
+    db: Session = Depends(get_db),
+):
+    """Improve a specific campo's content using AI."""
+    from app.models.campo import Campo
+    from app.services.audit import AuditService
+
+    fase = get_fase_or_404(db, fase_id)
+    campo = db.query(Campo).filter(
+        Campo.fase_id == fase_id,
+        Campo.clave == clave,
+    ).first()
+
+    if not campo:
+        raise HTTPException(status_code=404, detail="Campo no encontrado")
+
+    # Get fase context
+    expediente = fase.expediente
+    programa = expediente.nombre_programa if expediente else ""
+    contexto = f"Fase: {fase.nombre}\nPrograma: {programa}\nCampo: {clave}\n\nContenido actual:\n{campo.valor}"
+
+    # Improve content using AI
+    improved = await mejorar_contenido(campo.valor, contexto)
+
+    # Update campo
+    old_valor = campo.valor
+    campo.valor = improved
+
+    audit = AuditService(db)
+    audit.log_update(
+        entity="Campo",
+        entity_id=campo.id,
+        old_values={"valor": old_valor[:100] + "..."},
+        new_values={"valor": improved[:100] + "..."},
+    )
+
+    db.commit()
+
+    return {
+        "success": True,
+        "campo_id": str(campo.id),
+        "clave": clave,
+        "contenido_anterior": old_valor,
+        "contenido_mejorado": improved,
+    }
+
+
+@router.post("/fases/{fase_id}/mejorar-todos")
+async def mejorar_todos_campos(
+    fase_id: UUID,
+    db: Session = Depends(get_db),
+):
+    """Improve all campos content using AI."""
+    from app.models.campo import Campo
+    from app.services.audit import AuditService
+
+    fase = get_fase_or_404(db, fase_id)
+    expediente = fase.expediente
+    programa = expediente.nombre_programa if expediente else ""
+
+    campos = db.query(Campo).filter(Campo.fase_id == fase_id).all()
+
+    results = []
+    for campo in campos:
+        contexto = f"Fase: {fase.nombre}\nPrograma: {programa}\nCampo: {campo.clave}\n\nContenido actual:\n{campo.valor}"
+        improved = await mejorar_contenido(campo.valor, contexto)
+
+        old_valor = campo.valor
+        campo.valor = improved
+
+        audit = AuditService(db)
+        audit.log_update(
+            entity="Campo",
+            entity_id=campo.id,
+            old_values={"valor": old_valor[:100] + "..."},
+            new_values={"valor": improved[:100] + "..."},
+        )
+
+        results.append({
+            "id": str(campo.id),
+            "clave": campo.clave,
+            "mejorado": improved != old_valor,
+        })
+
+    db.commit()
+
+    return {
+        "success": True,
+        "fase_id": str(fase_id),
+        "fase_nombre": fase.nombre,
+        "campos_procesados": len(results),
+        "results": results,
+    }
+
+
+@router.post("/expedientes/{expediente_id}/auto-fill-fases")
+def auto_fill_all_fases(expediente_id: UUID, db: Session = Depends(get_db)):
+    """Auto-fill all fases of an expediente using AI/RAG."""
+    result = auto_fill_expediente_fases_sync(str(expediente_id), db)
+    if not result.get("success"):
+        raise HTTPException(status_code=404, detail=result.get("error", "Error"))
+    return result

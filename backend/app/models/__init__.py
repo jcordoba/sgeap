@@ -7,6 +7,7 @@ from app.models.observacion import Observacion
 from app.models.version import Version
 from app.models.audit_log import AuditLog
 from app.models.user import User, Role
+from app.models.documento_rag import DocumentoRAG
 
 __all__ = [
     "Expediente",
@@ -18,4 +19,5 @@ __all__ = [
     "AuditLog",
     "User",
     "Role",
+    "DocumentoRAG",
 ]

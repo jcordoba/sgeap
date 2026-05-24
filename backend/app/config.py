@@ -34,6 +34,10 @@ class Settings(BaseSettings):
     upload_dir: Path = BASE_DIR / "uploads"
     max_file_size_mb: int = 50
 
+    # AI
+    minimax_api_key: str = ""
+    minimax_base_url: str = "https://api.minimax.chat/v1"
+
     class Config:
         env_file = ".env"
         case_sensitive = False

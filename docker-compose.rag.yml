@@ -1,0 +1,21 @@
+# PostgreSQL con pgvector para RAG institucional
+services:
+  postgres-rag:
+    image: pgvector/pgvector:pg18
+    container_name: sgeap-rag-db
+    environment:
+      POSTGRES_USER: rag_user
+      POSTGRES_PASSWORD: rag_pass_2026
+      POSTGRES_DB: sgeap_rag
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgvector_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rag_user -d sgeap_rag"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  pgvector_data:

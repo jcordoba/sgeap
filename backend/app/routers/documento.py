@@ -169,6 +169,10 @@ def get_documento_preview(expediente_id: UUID, db: Session = Depends(get_db)):
         Fase.expediente_id == expediente_id
     ).order_by(Fase.numero).all()
 
+    # Calcular progreso dinámicamente
+    fases_completadas = len([f for f in fases if f.completada])
+    progreso = int((fases_completadas / 10) * 100) if fases else 0
+
     # Estadísticas
     total_evidencias = db.query(Evidencia).join(Fase).filter(
         Fase.expediente_id == expediente_id
@@ -177,10 +181,10 @@ def get_documento_preview(expediente_id: UUID, db: Session = Depends(get_db)):
     return {
         "programa": expediente.nombre_programa,
         "fases_registradas": len(fases),
-        "fases_completadas": len([f for f in fases if f.completada]),
+        "fases_completadas": fases_completadas,
         "fases_pendientes": len([f for f in fases if not f.completada]),
         "total_evidencias": total_evidencias,
-        "progreso": expediente.progreso,
+        "progreso": progreso,
         "estado": expediente.estado.value if hasattr(expediente.estado, 'value') else expediente.estado,
         "listo_para_generar": len(fases) == 10 and all(f.completada for f in fases),
         "mensaje": "Documento listo para generar" if len(fases) == 10 and all(f.completada for f in fases) else "Completar fases pendientes primero",

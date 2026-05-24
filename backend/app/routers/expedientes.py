@@ -15,6 +15,7 @@ from app.schemas.expediente import (
     ExpedienteListResponse,
 )
 from app.services.audit import AuditService
+from app.services.ia_fase import auto_fill_expediente_fases_sync
 
 router = APIRouter(prefix="/api/expedientes", tags=["expedientes"])
 
@@ -59,6 +60,12 @@ def create_expediente(
     db.commit()
     db.refresh(db_expediente)
 
+    # Auto-fill all phases with AI suggestions
+    try:
+        auto_fill_expediente_fases_sync(str(db_expediente.id), db)
+    except Exception as e:
+        print(f"Auto-fill warning: {e}")
+
     # Log audit
     audit = AuditService(db)
     audit.log_create(
@@ -67,7 +74,8 @@ def create_expediente(
         new_values={"nombre_programa": expediente.nombre_programa},
     )
 
-    # Build response with progress
+    # Refresh to get filled campos
+    db.refresh(db_expediente)
     response = ExpedienteResponse.model_validate(db_expediente)
     response.progreso = calculate_progress(db_expediente)
     return response
@@ -201,11 +209,12 @@ def get_tablero(expediente_id: UUID, db: Session = Depends(get_db)):
     fases_data = []
     for fase in sorted(expediente.fases, key=lambda f: f.numero):
         pendientes = [o for o in fase.observaciones if not o.revisada]
+        estado_val = fase.estado.value if hasattr(fase.estado, 'value') else fase.estado
         fases_data.append({
             "id": str(fase.id),
             "numero": fase.numero,
             "nombre": fase.nombre,
-            "estado": fase.estado.value,
+            "estado": estado_val,
             "completada": fase.completada,
             "observaciones_pendientes": len(pendientes),
         })
@@ -213,7 +222,7 @@ def get_tablero(expediente_id: UUID, db: Session = Depends(get_db)):
     return {
         "expediente_id": str(expediente_id),
         "nombre_programa": expediente.nombre_programa,
-        "estado": expediente.estado.value,
+        "estado": expediente.estado.value if hasattr(expediente.estado, 'value') else expediente.estado,
         "progreso": calculate_progress(expediente),
         "fases": fases_data,
     }
