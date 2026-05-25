@@ -1,0 +1,84 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: sgeap
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - postgres_sgeap:/var/lib/postgresql/data
+    networks:
+      - backend
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    image: sgeap-backend:latest
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/sgeap
+      MINIMAX_API_KEY: ${MINIMAX_API_KEY:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - backend
+      - frontend
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.sgeap-api.rule=Host(`sgeap.singularity.cyou`) && PathPrefix(`/api`)"
+        - "traefik.http.routers.sgeap-api.entrypoints=websecure"
+        - "traefik.http.routers.sgeap-api.tls.certresolver=le"
+        - "traefik.http.services.sgeap-api.loadbalancer.server.port=8000"
+        - "traefik.docker.network=frontend"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    image: sgeap-frontend:latest
+    environment:
+      NEXT_PUBLIC_API_URL: https://sgeap.singularity.cyou/api
+      NODE_ENV: production
+    depends_on:
+      - backend
+    networks:
+      - frontend
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.sgeap-web.rule=Host(`sgeap.singularity.cyou`)"
+        - "traefik.http.routers.sgeap-web.entrypoints=websecure"
+        - "traefik.http.routers.sgeap-web.tls.certresolver=le"
+        - "traefik.http.services.sgeap-web.loadbalancer.server.port=3000"
+        - "traefik.docker.network=frontend"
+
+networks:
+  frontend:
+    external: true
+  backend:
+    external: true
+
+volumes:
+  postgres_sgeap:
+    driver: local

@@ -6,54 +6,50 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy-backend:
-    name: Deploy Backend
+  deploy:
+    name: Deploy to VPS
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Deploy to VPS
-        uses: appleboy/ssh-action@v0.1.7
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          port: ${{ secrets.VPS_PORT || '22' }}
-          script: |
-            cd /home/opsmgr/stacks/appsgeap
-            git pull origin main
-            cd backend
-            pip install -r requirements.txt --quiet
-            pkill -f uvicorn || true
-            nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > /tmp/sgeap.log 2>&1 &
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-
-  deploy-frontend:
-    name: Deploy Frontend
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Build frontend
-        run: |
-          cd frontend
-          npm ci
-          npm run build
-
-      - name: Deploy to VPS
+      - name: Deploy to VPS (Docker Swarm)
         uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || '22' }}
+          envs:
+            POSTGRES_PASSWORD,MINIMAX_API_KEY
           script: |
-            rm -rf /home/opsmgr/stacks/appsgeap/frontend/out
-            cp -r ${{ github.workspace }}/frontend/out /home/opsmgr/stacks/appsgeap/frontend/
+            cd /home/opsmgr/stacks/appsgeap
+
+            # Ensure frontend network exists
+            docker network create frontend 2>/dev/null || true
+            docker network create backend 2>/dev/null || true
+
+            # Pull latest code
+            git pull origin main
+
+            # Export env vars for docker-compose
+            export POSTGRES_USER=${POSTGRES_USER:-postgres}
+            export POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+            export MINIMAX_API_KEY="$MINIMAX_API_KEY"
+
+            # Build and deploy stack
+            docker build -t sgeap-backend:latest -f Dockerfile.backend .
+            docker build -t sgeap-frontend:latest -f Dockerfile.frontend .
+
+            # Remove old stack if exists
+            docker stack rm sgeap 2>/dev/null || true
+            sleep 5
+
+            # Deploy
+            docker stack deploy -c docker-compose.prod.yml sgeap
+
+            echo "Deploy completed!"
+            docker stack ps sgeap

@@ -1,0 +1,36 @@
+FROM node:20-alpine AS base
+
+FROM base AS deps
+RUN apk add --no-cache libc6-compat
+WORKDIR /app
+
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm ci
+
+FROM base AS builder
+WORKDIR /app
+ENV NEXT_PUBLIC_API_URL=https://sgeap.singularity.cyou/api
+RUN npm install -g next
+COPY --from=deps /app/node_modules ./node_modules
+COPY frontend/ .
+RUN npm run build
+
+FROM base AS runner
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV HOSTNAME="0.0.0.0"
+
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+
+RUN chown -R nextjs:nodejs /app
+
+USER nextjs
+
+EXPOSE 3000
+
+CMD ["node", "server.js"]
