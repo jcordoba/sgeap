@@ -22,11 +22,12 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || '22' }}
           script: |
-            cd /var/www/sgeap
+            cd /home/opsmgr/stacks/appsgeap
             git pull origin main
             cd backend
             pip install -r requirements.txt --quiet
-            systemctl restart sgeap-backend || (pkill -f uvicorn; nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 &)
+            pkill -f uvicorn || true
+            nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 > /tmp/sgeap.log 2>&1 &
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
@@ -54,7 +55,5 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT || '22' }}
           script: |
-            rm -rf /var/www/sgeap/frontend/out
-            cp -r ${{ github.workspace }}/frontend/out /var/www/sgeap/frontend/
-            # Or if using nginx serving static files:
-            # cp -r ${{ github.workspace }}/frontend/out/* /var/www/sgeap/public/
+            rm -rf /home/opsmgr/stacks/appsgeap/frontend/out
+            cp -r ${{ github.workspace }}/frontend/out /home/opsmgr/stacks/appsgeap/frontend/
