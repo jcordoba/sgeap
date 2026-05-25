@@ -2,23 +2,26 @@
 
 ## Secrets Requeridos
 
-### Frontend (Vercel)
+### VPS Deployment (sgeap.singularity.cyou)
 ```bash
-gh secret set VERCEL_TOKEN --body "tu-vercel-token"
-gh secret set VERCEL_ORG_ID --body "tu-org-id"
-gh secret set VERCEL_PROJECT_ID --body "tu-project-id"
+gh secret set VPS_HOST --body "tu-vps-ip-o-dominio"
+gh secret set VPS_USER --body "usuario-ssh"
+gh secret set VPS_SSH_KEY --body "clave-privada-ssh"
+gh secret set VPS_PORT --body "22"
+gh secret set DATABASE_URL --body "postgresql://user:pass@host:5432/dbname"
 ```
 
-### Backend
+### Ejemplo con IP:
 ```bash
-gh secret set DATABASE_URL --body "postgresql://user:pass@host:5432/dbname"
+gh secret set VPS_HOST --body "192.168.1.100"
+gh secret set VPS_USER --body "root"
 ```
 
 ## Habilitar Deploy
 
 1. Editar `.github/workflows/deploy.yml`
-2. Cambiar `if: false` a `if: true` en el step de deploy que uses
-3. Configurar los secrets correspondientes
+2. Descomentar/ajustar los steps de deploy según tu configuración de VPS
+3. Configurar los secrets correspondientes en GitHub
 
 ## Workflows Disponibles
 

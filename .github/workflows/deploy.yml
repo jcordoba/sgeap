@@ -9,26 +9,24 @@ jobs:
   deploy-backend:
     name: Deploy Backend
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v0.1.7
         with:
-          python-version: '3.12'
-
-      - name: Install dependencies
-        run: |
-          cd backend
-          pip install -r requirements.txt 2>/dev/null || pip install fastapi uvicorn sqlalchemy pydantic pydantic-settings
-
-      - name: Deploy to Render (example)
-        if: false  # Enable when configured
-        run: |
-          # Configure your deployment target here
-          echo "Configure deployment steps"
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || '22' }}
+          script: |
+            cd /var/www/sgeap
+            git pull origin main
+            cd backend
+            pip install -r requirements.txt --quiet
+            systemctl restart sgeap-backend || (pkill -f uvicorn; nohup uvicorn app.main:app --host 0.0.0.0 --port 8000 &)
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
@@ -42,12 +40,21 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Deploy to Vercel
-        if: false  # Enable when VERCEL_TOKEN is configured
-        uses: amondnet/vercel-action@v25
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm ci
+          npm run build
+
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v0.1.7
         with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          vercel-args: '--prod'
-          working-directory: frontend
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || '22' }}
+          script: |
+            rm -rf /var/www/sgeap/frontend/out
+            cp -r ${{ github.workspace }}/frontend/out /var/www/sgeap/frontend/
+            # Or if using nginx serving static files:
+            # cp -r ${{ github.workspace }}/frontend/out/* /var/www/sgeap/public/
