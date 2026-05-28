@@ -6,7 +6,7 @@ services:
     environment:
       POSTGRES_DB: sgeap
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-Acued0ct0L0cal2026!}
     volumes:
       - postgres_sgeap:/var/lib/postgresql/data
     networks:
@@ -27,10 +27,11 @@ services:
       dockerfile: Dockerfile.backend
     image: sgeap-backend:latest
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/sgeap
+      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-Acued0ct0L0cal2026!}@postgres:5432/sgeap
       MINIMAX_API_KEY: ${MINIMAX_API_KEY:-}
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - backend
       - frontend
