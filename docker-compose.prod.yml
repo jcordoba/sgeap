@@ -53,7 +53,7 @@ services:
       dockerfile: Dockerfile.frontend
     image: sgeap-frontend:latest
     environment:
-      NEXT_PUBLIC_API_URL: https://sgeap.singularity.cyou/api
+      NEXT_PUBLIC_API_URL: https://sgeap.singularity.cyou
       NODE_ENV: production
     depends_on:
       - backend
