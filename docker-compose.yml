@@ -1,0 +1,39 @@
+version: "3.8"
+services:
+  postgres:
+    image: postgres:16
+    container_name: sgeap-db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Acued0ct0L0cal2026!
+      POSTGRES_DB: sgeap
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d sgeap"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-rag:
+    image: pgvector/pgvector:pg18
+    container_name: sgeap-rag-db
+    environment:
+      POSTGRES_USER: rag_user
+      POSTGRES_PASSWORD: rag_pass_2026
+      POSTGRES_DB: sgeap_rag
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgvector_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rag_user -d sgeap_rag"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+  pgvector_data:

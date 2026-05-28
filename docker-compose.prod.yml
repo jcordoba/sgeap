@@ -30,8 +30,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/sgeap
       MINIMAX_API_KEY: ${MINIMAX_API_KEY:-}
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     networks:
       - backend
       - frontend
